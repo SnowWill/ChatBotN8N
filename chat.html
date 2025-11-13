@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Chatbot N8N </title>
+  <title>Chatbot N8N</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -38,11 +38,17 @@
         <div class="h-10 w-10 rounded-2xl bg-primary-600 flex items-center justify-center text-white font-bold">V</div>
         <div>
           <h1 class="text-xl font-semibold text-slate-800 dark:text-slate-100">Chatbot N8N</h1>
+          <p class="text-xs text-slate-500 dark:text-slate-400">ล็อกอินด้วย PIN เรียบร้อย</p>
         </div>
       </div>
       <div class="flex items-center gap-2">
-        <button @click="resetChat" class="px-3 py-2 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:opacity-90">
+        <button @click="resetChat"
+                class="px-3 py-2 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:opacity-90 text-sm">
           เริ่มใหม่
+        </button>
+        <button @click="logout"
+                class="px-3 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 text-sm">
+          ออกจากระบบ
         </button>
       </div>
     </div>
@@ -115,12 +121,11 @@
 
     <!-- Footer -->
     <div class="text-center text-xs text-slate-500 dark:text-slate-400 mt-4">
-      <!-- ใส่เวอร์ชั้น -->
+      Chatbot N8N • Demo | <a href="login.html" class="underline">กลับหน้า Login</a>
     </div>
   </div>
 </div>
 
-<!-- Vue 3 -->
 <script src="https://unpkg.com/vue@3"></script>
 <script>
 const BOT_NAME = 'Vee';
@@ -147,17 +152,18 @@ const app = Vue.createApp({
     canSend(){ return this.draft.trim().length > 0 && !this.typing },
   },
   mounted(){
+    // ถ้าไม่เคย login ให้เด้งกลับไปหน้า login
+    if(localStorage.getItem('loggedIn') !== 'yes'){
+      window.location.href = 'login.html';
+      return;
+    }
     this.applyTheme();
     this.$nextTick(() => this.scrollBottom());
   },
   methods: {
-    toggleTheme(){
-      this.theme = this.theme === 'dark' ? 'light' : 'dark';
-      localStorage.setItem('theme', this.theme);
-      this.applyTheme();
-    },
     applyTheme(){
       document.documentElement.classList.toggle('dark', this.theme === 'dark');
+      localStorage.setItem('theme', this.theme);
     },
     resetChat(){
       this.messages = [
@@ -165,6 +171,12 @@ const app = Vue.createApp({
       ];
       this.draft='';
       this.$nextTick(this.scrollBottom);
+    },
+    logout(){
+      localStorage.removeItem('loggedIn');
+      this.draft = '';
+      this.typing = false;
+      window.location.href = 'login.html';
     },
     useSuggestion(s){ this.draft = s; this.$nextTick(() => this.send()); },
     push(role, content){
@@ -183,53 +195,53 @@ const app = Vue.createApp({
       this.reply(text);
     },
 
-    // 🔵 ตรงนี้ = จุดที่เรียก API จริง
     async reply(text){
       this.typing = true;
       try {
-        const answer = await this.callAPI(text);   // 🔗 เรียก backend ที่ /api/chat
+        const answer = await this.callAPI(text);   // จุดนี้เอาไว้เรียก API จริง
         this.push('assistant', answer);
       } catch (err) {
         console.error('API error, fallback to local rules:', err);
-
         const found = canned.find(c => c.k.test(text));
         let answer = found ? found.a() : this.smartReply(text);
-        answer += '\n\n(ตอนนี้ตอบจากโหมดเดโม่ เพราะเรียก API จริงไม่สำเร็จ)';
+        answer += '\n\n(ตอนนี้ตอบจากโหมดเดโม่ เพราะยังไม่ได้ตั้งค่า API จริง)';
         this.push('assistant', answer);
       } finally {
         this.typing = false;
       }
     },
 
-    // 🟡 ฟังก์ชันนี้ = ตำแหน่ง "เสียบ API" (แก้ URL/รูปแบบ JSON ตาม backend ของคุณ)
     async callAPI(userText){
-      const res = await fetch('http://localhost:3000/api/chat', {
+      // ❗ ตรงนี้เอาไว้ใส่ URL API ของคุณ
+      // เช่น const API_URL = "https://your-n8n-or-backend.com/api/chat";
+      const API_URL = "<<< ใส่ API URL ตรงนี้ >>>";
+
+      // ถ้ายังไม่ได้ตั้งค่า ให้โยน error กลับไปใช้โหมดเดโม่
+      if (API_URL.includes("<<<")) {
+        throw new Error("API URL ยังไม่ถูกตั้งค่า");
+      }
+
+      const res = await fetch(API_URL, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-          // ❗ ห้ามใส่ OpenAI API Key ตรงนี้ ให้ไปอยู่ฝั่ง server แทน
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: userText })
       });
 
-      if (!res.ok) {
-        throw new Error('API responded with ' + res.status);
-      }
+      if (!res.ok) throw new Error("API ตอบกลับผิดพลาด: " + res.status);
 
       const data = await res.json();
-      // สมมติ backend ส่ง { reply: "..." }
       return data.reply || data.message || JSON.stringify(data);
     },
 
     smartReply(text){
       const t = text.toLowerCase();
       if(t.includes('ฟีเจอร์') || t.includes('feature')){
-        return 'ฟีเจอร์เดโม: แชต UI สวยๆ, ปุ่มลัด, โหมดมืด/สว่าง, ตัวบอกกำลังพิมพ์, สกรอลอัตโนมัติ, รีเซ็ตแชต\n(ถ้าเชื่อมต่อ API จริง เช่น OpenAI ผ่าน backend จะแชร์ความรู้ได้เยอะขึ้นกว่านี้อีกมาก)';
+        return 'ฟีเจอร์เดโม: แชต UI สวยๆ, ปุ่มลัด, ตัวบอกกำลังพิมพ์, Login ด้วย PIN 6 หลัก, Logout, ระบบจำธีม\n(ถ้าเชื่อมต่อ API จริง เช่น OpenAI / n8n ผ่าน backend จะแชร์ความรู้ได้เยอะขึ้นอีกมาก)';
       }
       if(t.includes('เชื่อมต่อ') || t.includes('api')){
-        return 'ตอนนี้หน้าบอทนี้ยิงคำถามไปที่ /api/chat ผ่านฟังก์ชัน callAPI() แล้วนะ\nคุณแค่ไปเขียน backend ให้ตอบ JSON { reply: "ข้อความบอท" } ก็กลายเป็นบอททำงานจริงทันที 🎯';
+        return 'ตรงฟังก์ชัน callAPI() ในไฟล์ chat.html คือจุดที่คุณเอา URL API มาใส่ครับ เช่นจาก n8n หรือ Backend ของคุณเอง 🎯';
       }
-      return 'โอเค รับทราบ: "' + text + '" \nนี่เป็นโหมดเดโม่—ถ้า backend ของคุณเปิดใช้งานแล้ว ฉันจะตอบด้วยข้อมูลจาก API จริงให้ได้เลย 😉';
+      return 'โอเค รับทราบ: "' + text + '" \nตอนนี้เป็นโหมดเดโม่—ยังไม่ได้เชื่อม API จริง 😉';
     }
   }
 });

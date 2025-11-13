@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login • Chatbot N8N</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd', 400: '#60a5fa',
+              500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a'
+            }
+          },
+          boxShadow: {
+            soft: '0 10px 30px rgba(2, 6, 23, .15)'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .glass { backdrop-filter: blur(14px); background: rgba(255,255,255,0.75); }
+    .dark .glass { background: rgba(15,23,42,.85); }
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-950 transition-colors">
+<div id="app" class="p-4 sm:p-6 md:p-10">
+  <div class="max-w-md mx-auto mt-16">
+    <div class="glass rounded-3xl shadow-soft border border-slate-200/70 dark:border-slate-800/60 p-6 sm:p-8">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="h-12 w-12 rounded-2xl bg-primary-600 flex items-center justify-center text-white font-bold text-xl">V</div>
+      <div>
+        <h1 class="text-2xl font-semibold text-slate-800 dark:text-slate-100">เข้าสู่ระบบ Chatbot N8N</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">ป้อน PIN 6 หลักเพื่อเข้าใช้งานแชตบอท</p>
+      </div>
+      </div>
+
+      <form @submit.prevent="login" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+            PIN 6 หลัก
+          </label>
+          <input
+            v-model="pinInput"
+            type="password"
+            inputmode="numeric"
+            maxlength="6"
+            autocomplete="off"
+            class="w-full rounded-2xl border border-slate-300 dark:border-slate-700 bg-white/90 dark:bg-slate-800/80 px-4 py-3 text-lg tracking-[0.4em] text-center font-semibold text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-400 dark:focus:ring-primary-600"
+            placeholder="••••••"
+          />
+          <p class="mt-1 text-xs text-slate-400">* ต้องเป็นตัวเลข 6 หลัก</p>
+          <p v-if="loginError" class="mt-2 text-sm text-red-500">
+            {{ loginError }}
+          </p>
+        </div>
+
+        <button
+          type="submit"
+          :disabled="pinInput.trim().length !== 6 || loggingIn"
+          class="w-full rounded-2xl px-4 py-3 bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-40 disabled:cursor-not-allowed shadow-soft flex items-center justify-center gap-2"
+        >
+          <span v-if="!loggingIn">เข้าสู่ระบบ</span>
+          <span v-else class="inline-flex items-center gap-2">
+            <span class="w-4 h-4 border-2 border-white/60 border-t-transparent rounded-full animate-spin"></span>
+            กำลังตรวจสอบ...
+          </span>
+        </button>
+      </form>
+    </div>
+
+    <div class="text-center text-xs text-slate-500 dark:text-slate-400 mt-4">
+      Demo Login ด้วย PIN 6 หลัก (ค่าเริ่มต้น: 123456)
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/vue@3"></script>
+<script>
+const CORRECT_PIN = '123456'; // 👈 เปลี่ยน PIN ได้ตรงนี้
+
+const app = Vue.createApp({
+  data(){
+    return {
+      pinInput: '',
+      loginError: '',
+      loggingIn: false,
+    }
+  },
+  mounted(){
+    // theme basic (เอาไว้เผื่อใช้ร่วมกับหน้า chat)
+    const theme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+  },
+  methods:{
+    login(){
+      this.loginError = '';
+      if(this.pinInput.trim().length !== 6){
+        this.loginError = 'กรุณากรอก PIN 6 หลักให้ครบ';
+        return;
+      }
+
+      this.loggingIn = true;
+      setTimeout(() => {
+        if(this.pinInput === CORRECT_PIN){
+          localStorage.setItem('loggedIn', 'yes');
+          this.pinInput = '';
+          this.loginError = '';
+          // ไปหน้า chat.html
+          window.location.href = 'chat.html';
+        }else{
+          this.loginError = 'PIN ไม่ถูกต้อง ลองใหม่อีกครั้ง';
+        }
+        this.loggingIn = false;
+      }, 500);
+    }
+  }
+});
+
+app.mount('#app');
+</script>
+</body>
+</html>
